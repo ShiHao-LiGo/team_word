@@ -5,11 +5,7 @@ from django.shortcuts import render
 from utils.pre_load import pre_load_thu
 
 thu_lac = pre_load_thu
-pattern = [[r"what the type of ", r"种什么好"],
-           [r"描述", "气候类型是什么", r"属于哪种气候", r"是哪种气候", r"是什么天气", r"哪种天气", r"天气[\u4e00-\u9fa5]*"],
-           [r"有哪些营养", r"有[\u4e00-\u9fa5]+成分", r"含[\u4e00-\u9fa5]+成分", r"含[\u4e00-\u9fa5]+元素", r"有[\u4e00-\u9fa5]+营养",
-            r"有[\u4e00-\u9fa5]+元素"],
-           [r"[\u4e00-\u9fa5]+植物学", r"[\u4e00-\u9fa5]+知识"]]
+
 
 
 def question_answering(request):
