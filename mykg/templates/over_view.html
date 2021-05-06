@@ -1,0 +1,265 @@
+{% extends "base.html" %} {% block mainbody %}
+    <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title></title>
+    <meta charset="utf-8" />
+    <script src="/static/js/echarts.js"></script>
+{#    <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/echarts-all-3.js"></script>#}
+</head>
+<div class="row">
+       <div class = "col-md-7" >
+        <div class="panel" style="background: #1c2434">
+            <header class = "panel-heading">
+            缺陷报告示例（来自Bugzilla）
+            </header>
+            <div class = "panel-body">
+               <img src="../static/img/bug1.png" style="width: 100% ;height:100%;">
+            </div>
+        </div>
+    </div>
+{% if entityRelation %}
+    <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+    <div class = "col-md-5">
+        <div class="panel " style="background: #1c2434">
+            <header class="panel-heading">
+            </header>
+            <div class = "panel-body ">
+                <div id="graph" style="width: 100%;height:500px;"></div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+</div>
+
+
+{% if entityRelation %}
+<script src="/static/js/jquery.min.js"></script>
+<script type="text/javascript">
+        // 将后端的查询结果使用echarts展示
+        var ctx = [ {{ ctx|safe }} ] ;
+
+        //{entity2,rel}
+        var entityRelation = [ {{ entityRelation|safe }} ] ;
+
+        var data = [] ;
+        var links = [] ;
+        if(ctx.length == 0){
+            var node = {} ;
+            var url = decodeURI(location.search) ;
+            var str = "";
+                str = "108746";
+            //实体１
+            node['name'] = str;
+            //alert(document.getElementById('user_text').value)
+            node['draggable'] = true ;
+            node['symbolSize'] = 50;
+            node['category'] = 1 ;
+            var id = 0;
+            node['id'] = id.toString() ;
+            data.push(node) ;
+
+            //获取实体２，存储在data中，如果实体2已经存在于data中，则不push
+            var maxDisPlayNode = 1000 ;
+
+            for( var i = 0 ;i < Math.min(maxDisPlayNode,entityRelation[0].length) ; i++ ){
+                node = {} ;
+                            {#alert(entityRelation[0][i]['entity2']['name'])#}
+                node['name'] = entityRelation[0][i]['entity2']['name'] ;
+                let leng = entityRelation[0][i]['entity2']['name'].length;
+
+                if (leng>20){
+                    {#alert(leng);#}
+                    node['show'] = false;
+
+                }
+                node['draggable'] = true ;
+                node['symbolSize'] = 15;
+                if('url' in entityRelation[0][i]['entity2']){
+                    node['category'] = 1 ;
+                }
+                else{
+                    node['category'] = 2 ;
+                }
+                id = i + 1
+                node['id'] = id.toString();
+                var flag = 1 ;
+                relationTarget = id.toString() ;
+                for(var j = 0 ; j<data.length ;j++){
+                    if(data[j]['name'] === node['name']){
+                        flag = 0 ;
+                        relationTarget = data[j]['id']  ;
+                        break ;
+                    }
+                }
+                relation = {};
+                relation['source'] = 0 ;
+                relation['target'] = relationTarget ;
+                relation['category'] = 0 ;
+
+                if(flag === 1){
+                    data.push(node) ;
+                    relation['value'] = entityRelation[0][i]['rel']['type'];
+                    relation['symbolSize'] = 5;
+                    links.push(relation) ;
+                }
+                else{
+                    maxDisPlayNode += 1 ;
+                    for(var j = 0; j<links.length ;j++){
+                        if(links[j]['target'] === relationTarget){
+                            links[j]['value'] = links[j]['value']+" | "+entityRelation[0][i]['rel']['type'];
+                            break ;
+                        }
+                    }
+                }
+            }
+
+
+        }
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('graph'));
+
+        option = {
+           backgroundColor: '#1c2434',
+            title: {
+                textStyle: { //主标题文本样式{"fontSize": 18,"fontWeight": "bolder","color": "#333"}
+                fontSize: 20,
+                    color:"#c8e6c6"
+            },
+                text: '关系图',
+            },
+            tooltip: {
+               formatter: function (x) {
+                return x.data.des;
+            }
+            },
+            toolbox: {
+            // 显示工具箱
+            show: true,
+            feature: {
+                mark: {
+                    show: true
+                },
+                // 还原
+                restore: {
+                    show: true
+                },
+                // 保存为图片
+                saveAsImage: {
+                    show: true
+                }
+            }
+        },
+            label: {
+                normal: {
+                    show: true,
+                    position:"inside",
+                    textStyle: {
+                        fontSize: 20
+                    },
+                }
+            },
+            legend: {
+                x: "center",
+                show: true,
+                color:"#c8e6c6",
+            },
+
+            series: [
+                {
+                    type: 'graph',
+                    layout: 'force',
+                    symbolSize: 50,
+                    focusNodeAdjacency: true,
+                    roam: true,
+                    edgeSymbol: ['circle', 'arrow'],
+                    edgeSymbolSize: [2, 10],
+                    edgeLabel: {
+                        normal: {
+                            show: true,
+                            textStyle: {
+                                fontSize: 12,
+                                color:"#c8e6c6",
+
+                            },
+                            formatter: "{c}"
+                        }
+                    },
+                    lineStyle: {
+                        normal: {
+                            {#opacity: 0.9,#}
+                            width: 2,
+                            {#curveness: 0,#}
+                            color:"#c8e6c6"
+                        }
+                    },
+                    label: {
+                        normal: {
+                            show: true,
+
+                            textStyle: {
+                                fontSize: 20,
+                                fontStyle: 'oblique',
+                                fontWeight:'bolder',
+                                textBorderWidth:"100",
+                                textBorderColor : '#4592FF',
+                                 {#fontFamily :'sans-serif',#}
+                                 color:"#ffffff",
+                                width:10,
+                                textShadowOffsetX:2,
+                                textShadowOffsetY:2,
+                                textShadowBlur:2,
+                                textShadowColor:"#66f12f",
+                                {#textBorderColor:"#2c4454",#}
+
+                            },
+                        }
+                    },
+                    force: {
+                        repulsion: 1500,
+                        edgeLength: [55,35]
+                    },
+                    animationEasingUpdate: "quinticInOut",          // 数据更新动画的缓动效果。[ default: cubicOut ]    "quinticInOut"
+                    animationDurationUpdate: 1000    ,
+                    categories: [{
+                        name: '查询实体',
+                        symbolSize:30,
+
+                        itemStyle: {
+                            normal: {
+                                {#color: "#ecf0f1",#}
+                                textStyle: {
+                                    fontStyle:"italic",
+
+                                color:"#66f12f"
+
+                            },
+                            }
+                        }
+                    }, {
+                        name: 'text',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                                 symbolSize:20
+                            }
+                        }
+                    }, {
+                        name: 'NewNode',
+                        itemStyle: {
+                            normal: {
+                                color: "#ffa940",
+                                 symbolSize:5
+                            }
+                        }
+                    }],
+                    data: data,
+                    links: links,
+                }
+            ]
+        };
+               // 数据更新动画的时长。[ default: 300 ]
+// 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+</script>
+{% endif %}
+{% endblock %}

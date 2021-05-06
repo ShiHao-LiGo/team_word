@@ -1,0 +1,16 @@
+{"text": "EU rejects German call to boycott British lamb.", "labels": [ [0, 2, "ORG"], [11, 17, "MISC"], ... ]}
+{"text": "Peter Blackburn", "labels": [ [0, 15, "PERSON"] ]}
+{"text": "President Obama", "labels": [ [10, 15, "PERSON"] ]}
+{"text": "welcom to yzu, start your labeling task and enjoy it!", 
+    "labels": 
+    [ 
+        [0, 2, "lable01"], 
+        [11, 17, "label02"],
+        [18, 22, "lable03"] 
+    ],
+    "relationships": 
+    [
+         [0, 2, "label01", 11, 17, "label02", "relationship01"], 
+         [11, 17, "label02", 18, 22, "lable03", "relationship02"]
+    ]
+}
