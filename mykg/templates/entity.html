@@ -36,7 +36,7 @@
             </div>
         </div>
 
-        
+
     </div>
     <p>
         <div class = "col-md-12">
@@ -88,6 +88,23 @@
         //{entity2,rel}
         var entityRelation = [ {{ entityRelation|safe }} ] ;
 
+        var category=[{
+                        name: '缺陷id',
+                        itemStyle: {
+                            normal: {
+                                color: "#4592FF",
+                                 symbolSize:20
+                            }
+                        }
+                    }, {
+                        name: '文本实体',
+                        itemStyle: {
+                            normal: {
+                                color: "#ffa940",
+                                 symbolSize:5
+                            }
+                        }
+                    }];
         var data = [] ;
         var links = [] ;
         if(ctx.length == 0){
@@ -102,7 +119,7 @@
             //alert(document.getElementById('user_text').value)
             node['draggable'] = true ;
             node['symbolSize'] = 80;
-            node['category'] = 1 ;
+            node['category'] = 0 ;
             var id = 0;
             node['id'] = id.toString() ;
             data.push(node) ;
@@ -124,10 +141,10 @@
                 node['draggable'] = true ;
                 node['symbolSize'] = 20;
                 if('url' in entityRelation[0][i]['entity2']){
-                    node['category'] = 1 ;
+                    node['category'] = 0 ;
                 }
                 else{
-                    node['category'] = 2 ;
+                    node['category'] = 1 ;
                 }
                 id = i + 1
                 node['id'] = id.toString();
@@ -229,11 +246,16 @@
                     },
                 }
             },
-            legend: {
-                x: "center",
-                show: true,
+            legend: [{
+            // selectedMode: 'single',
+            data: category.map(function (a) {
+                return a.name;
+
+            }),
+                textstyle:{
                 color:"#c8e6c6",
-            },
+                }
+        }],
 
             series: [
                 {
@@ -266,7 +288,6 @@
                     label: {
                         normal: {
                             show: true,
-
                             textStyle: {
                                 fontSize: 20,
                                 fontStyle: 'oblique',
@@ -291,38 +312,7 @@
                     },
                     animationEasingUpdate: "quinticInOut",          // 数据更新动画的缓动效果。[ default: cubicOut ]    "quinticInOut"
                     animationDurationUpdate: 1000    ,
-                    categories: [{
-                        name: '查询实体',
-                        symbolSize:30,
-
-                        itemStyle: {
-                            normal: {
-                                {#color: "#ecf0f1",#}
-                                textStyle: {
-                                    fontStyle:"italic",
-
-                                color:"#66f12f"
-
-                            },
-                            }
-                        }
-                    }, {
-                        name: 'text',
-                        itemStyle: {
-                            normal: {
-                                color: "#4592FF",
-                                 symbolSize:20
-                            }
-                        }
-                    }, {
-                        name: 'NewNode',
-                        itemStyle: {
-                            normal: {
-                                color: "#ffa940",
-                                 symbolSize:5
-                            }
-                        }
-                    }],
+                    categories: category,
                     data: data,
                     links: links,
                 }
