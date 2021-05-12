@@ -1,8 +1,15 @@
 import json
 import re
 import string
-
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+from scipy.linalg import norm
+from sklearn.feature_extraction.text import CountVectorizer
+import numpy as np
+from scipy.linalg import norm
 from demo.entity_view import relationCountDict
+from rabc import models
+from rabc.models import DATAs
 from utils.neo4j_models import Neo4j
 import nltk
 import jieba
@@ -10,6 +17,20 @@ from django.shortcuts import render
 from utils.pre_load import pre_load_thu, neo_con
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+
+
+def tfidf_similarity(s1, s2):
+    def add_space(s):
+        return ' '.join(list(s))
+
+    # 将字中间加入空格
+    s1, s2 = add_space(s1), add_space(s2)
+    # 转化为TF矩阵
+    cv = TfidfVectorizer(tokenizer=lambda s: s.split())
+    corpus = [s1, s2]
+    vectors = cv.fit_transform(corpus).toarray()
+    # 计算TF系数
+    return np.dot(vectors[0], vectors[1]) / (norm(vectors[0]) * norm(vectors[1]))
 
 
 def sortDict(relationDict):
@@ -161,6 +182,36 @@ def deal_product(BugID):
     return ret_dict
 
 
+def deal_desc(BugID):
+    ret_dict = {'bid': BugID}
+    relations = []
+    db = neo_con
+    q_answer = models.DATAs.objects.filter(Bug_ID=BugID).values("comment").first()
+    print(q_answer)
+    if q_answer is None:
+        answer = "抱歉，暂时没有答案"
+    else:
+        answer = q_answer['comment']
+        if answer is None:
+            answer = "抱歉，暂时没有答案"
+
+    ret_dict['answer'] = answer
+
+    entityRelation = db.getEntityRelationbyEntity(BugID)
+    entityRelation_s = sortDict(entityRelation)
+    entityRelation = json.dumps(entityRelation_s, ensure_ascii=False)
+    entityRelation = json.loads(entityRelation)
+    for i in range(len(entityRelation)):
+        entityRelation[i]["rel"]["comment"] = list(entityRelation_s[i]['rel'].types())[0]
+        rel = []
+        rel.append(entityRelation[i]["rel"]["comment"])
+        rel.append(entityRelation[i]["entity2"]["name"])
+        relations.append(rel)
+    ret_dict['relations'] = relations
+    print(ret_dict)
+    return ret_dict
+
+
 def q_a(request):
     answer = ""
     ret_dict = {}
@@ -170,6 +221,20 @@ def q_a(request):
         question = request.GET['question']
         print(question)
         Bug_list = re.findall(r'\d+', question)
+        # 计算问题相似度
+        an = {}
+        choice = -1
+        i = 0
+        s = ['类型或种类或type是什么', '出现的原因或症状或描述是什么怎么复现或步骤或describe或description或方式', '严重性或severity怎么样', '优先级或priority怎么样', '状态或status是怎么样',
+             '现在的阶段或milestone', '作用的产品或product']
+        for k in s:
+            sim = tfidf_similarity(question, k)
+            an[i] = sim
+            i = i + 1
+        an = sorted(an.items(), key=lambda x: x[1], reverse=True)
+        if an[0][1] >= 0.1:
+            choice = an[0][0]
+
         # 获取到问句中的BugId
         if len(Bug_list) != 0:
             BugID = Bug_list[0]
@@ -187,29 +252,30 @@ def q_a(request):
         if BugID:
             # or 'symptom' or 'symptons' or '症状' or '原因' or '怎么' or '如何'
             ret_dict['bid'] = BugID
-            if 'how' in splited or 'symptom' in splited or 'symptons' in splited or '症状' in splited or '原因' in splited or '怎么' in splited or '如何' in splited:
-                # answer = db.matchItembyname(BugID)
-                answer = json.dumps(answer, ensure_ascii=False)
-                answer = json.loads(answer)
-            elif 'type' in splited or '类型' in splited:
+            if 'description' in splited or '描述' in splited or '原因' in splited or '复现' in splited or 'describe' in splited or 'symptom' in splited or 'symptons' in splited or '症状' in splited or '原因' in splited or '怎么' in splited or '如何' in splited or 'how' in splited or 'symptom' in splited or 'symptons' in splited or '症状' in splited or '原因' in splited or '怎么' in splited or '如何' in splited or choice == 1:
+                ret_dict = deal_desc(BugID)
+            elif 'type' in splited or '类型' in splited or choice == 0:
                 ret_dict = deal_type(BugID)
-            elif 'priority' in splited or '优先' in splited:
+            elif 'priority' in splited or '优先' in splited or choice == 3:
                 ret_dict = deal_priority(BugID)
-            elif 'severity' in splited or '严重' in splited:
+            elif 'severity' in splited or '严重' in splited or choice == 2:
                 ret_dict = deal_severity(BugID)
-            elif 'status' in splited or '状态' in splited:
+            elif 'status' in splited or '状态' in splited or choice == 4:
                 ret_dict = deal_status(BugID)
-            elif 'milestone' in  splited:
+            elif 'milestone' in splited or choice == 5:
                 ret_dict = deal_milestone(BugID)
-            elif 'product' in splited:
+            elif 'product' in splited or choice == 6:
                 ret_dict = deal_product(BugID)
+            else:
+
+                return render(request, "question_answering.html", {'cttx': "抱歉，暂时未找到答案,请您换种问题试试"})
 
             return render(request, "question_answering.html", {'ctx': json.dumps(ret_dict, ensure_ascii=False)})
         elif "Firefox里经常出Bug的是哪些组件" in question:
             ret_dict = {'answers': ['General', 'Bookmarks&History', 'Theme']}
             return render(request, "question_answering.html", {'ctx': json.dumps(ret_dict, ensure_ascii=False)})
         else:
-            return render(request, "question_answering.html", {'cttx': "暂时未找到答案"})
+            return render(request, "question_answering.html", {'cttx': "抱歉，暂时未找到答案,请您换种问题试试"})
 
     return render(request, "question_answering.html", context)
 
